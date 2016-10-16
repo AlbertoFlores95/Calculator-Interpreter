@@ -25,128 +25,13 @@ public class Calculator {
     public Token MatchAndEat(String type) {
         Token token = CurrentToken();
         if (!CurrentToken().type.Equals(type)) {
-            System.Environment.Exit(1);
+            //System.Environment.Exit(1);
         }
         EatToken(1);
         return token;
     }
-
-	public Protuberance Power() {
-        MatchAndEat("POWER");
-        return Factor();
-    }
 	
-	public Protuberance Mod() {
-        MatchAndEat("MOD");
-        return AlmostFactor();
-    }
-	
-    public Protuberance Multiply() {
-        MatchAndEat("MULTIPLY");
-        return AlmostFactor();
-    }
-
-    public Protuberance Divide() {
-        MatchAndEat("DIVIDE");
-        return AlmostFactor();
-    }
-
-    public Protuberance Add() {
-        MatchAndEat("ADD");
-        return Term();
-    }
-
-    public Protuberance Subtract() {
-        MatchAndEat("SUBTRACT");
-        return Term();
-    }
-
-    public Protuberance Factor() {
-        Protuberance result = null;
-        if (CurrentToken().type.Equals("LEFT_PAREN")) {
-            MatchAndEat("LEFT_PAREN");
-            result = v8Expression();
-            MatchAndEat("RIGHT_PAREN");
-        } else if (CurrentToken().type.Equals("NUMBER")) {
-           Token token = MatchAndEat("NUMBER");
-		   double res=0;
-		   try{
-		   res = Double.Parse(token.text);
-		   }catch(FormatException){Console.WriteLine("Auiiiiii");}
-		   result = new Number(res);
-		   try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("Factor");}
-        }
-        return result;
-    }
-	
-	public Protuberance AlmostFactor() {
-        Protuberance result = Factor();
-        while (CurrentToken().type.Equals("POWER")) {
-            switch (CurrentToken().type) {
-                case "POWER":
-                    result = new Operation("POWER",result,Power());
-                    break;
-            }
-        }
-		try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("AF");}
-        return result;
-    }
-
-    public Protuberance Term() {
-        Protuberance result = AlmostFactor();
-        while (CurrentToken().type.Equals("MULTIPLY") || CurrentToken().type.Equals("DIVIDE")|| CurrentToken().type.Equals("MOD")) {
-            switch (CurrentToken().type) {
-                case "MULTIPLY":
-                    result = new Operation("MULTIPLY",result,Multiply());
-                    break;
-                case "DIVIDE":
-                    result = new Operation("DIVIDE",result,Divide());
-                    break;
-				case "MOD":
-                    result = new Operation("MOD",result,Mod());
-                    break;
-            }
-        }
-		try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("Term");}
-        return result;
-    }
-
-    public Protuberance ArithmeticExpression() {
-        Protuberance result = Term();
-        while (CurrentToken().type.Equals("ADD") || CurrentToken().type.Equals("SUBTRACT")) {
-            switch (CurrentToken().type) {
-                case "ADD":
-                    result = new Operation("ADD",result,Add());
-					try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("AE");}
-                    break;
-                case "SUBTRACT":
-                    result = new Operation("SUBTRACT",result,Subtract());
-                    break;
-            }
-        }
-        return result;
-    }
-	
-	public Protuberance Relation(){
-		Protuberance result = ArithmeticExpression();
-		//Protuberance result = null;
-		String type = CurrentToken().type;
-		//if(type.Equals("EQUAL")||type.Equals("LESS")||type.Equals("GREATER")||type.Equals("LESSEQUAL")||type.Equals("GREATEREQUAL")){
-			switch(type){
-				case "EQUAL": result = Equal(result);
-								//Console.WriteLine(result.ToString());
-								break;
-				case "LESS": result = Less(result);break;
-				case "GREATER": result = Greater(result);break;
-				case "LESSEQUAL": result = LessEqual(result);break;
-				case "GREATEREQUAL": result = GreaterEqual(result);break;
-			}
-		//}
-		try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("Rela");}
-		return result;
-	}
-	
-	public Protuberance Less(Protuberance v8Expression){
+		public Protuberance Less(Protuberance v8Expression){
 		MatchAndEat("LESS");
 		return new Operation("LESS",v8Expression ,ArithmeticExpression());
 	}
@@ -170,18 +55,151 @@ public class Calculator {
 		MatchAndEat("GREATEREQUAL");
 		return new Operation("GREATEREQUAL",v8Expression ,ArithmeticExpression());
 	}
+
+	public Protuberance Power() {
+        MatchAndEat("POWER");
+        return Factor();
+    }
+	
+	public Protuberance Mod() {
+        MatchAndEat("MOD");
+        return Factor();
+    }
+	
+    public Protuberance Multiply() {
+        MatchAndEat("MULTIPLY");
+        return Factor();
+    }
+
+    public Protuberance Divide() {
+        MatchAndEat("DIVIDE");
+        return Factor();
+    }
+
+    public Protuberance Add() {
+        MatchAndEat("ADD");
+        return Term();
+    }
+
+    public Protuberance Subtract() {
+        MatchAndEat("SUBTRACT");
+        return Term();
+    }
+
+    public Protuberance Factor() {
+        Protuberance result = null;
+        if (CurrentToken().type.Equals("LEFT_PAREN")) {
+            MatchAndEat("LEFT_PAREN");
+            result = v8Expression();
+            MatchAndEat("RIGHT_PAREN");
+        } else if (CurrentToken().type.Equals("NUMBER")) {
+           Token token = MatchAndEat("NUMBER");
+		   result = new Number(Double.Parse(token.text));
+		   try{Console.WriteLine("factor"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Factor");}
+        }
+        return result;
+    }
+	
+	/*public Protuberance AlmostFactor() {
+        Protuberance result = Factor();
+        while (CurrentToken().type.Equals("POWER")) {
+            switch (CurrentToken().type) {
+                case "POWER":
+                    result = new Operation("POWER",result,Power());
+                    break;
+            }
+        }
+		//try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("AF");}
+        return result;
+    }*/
+	
+	public Protuberance SignedFactor(){
+		if (CurrentToken().type.Equals("SUBTRACT")){
+			MatchAndEat("SUBTRACT");
+			Protuberance result = new NegOp(Factor());
+			try{Console.WriteLine("sub the sign"+result.opinion());}catch(NullReferenceException){Console.WriteLine("SF");}
+			return result;
+		}
+		return Factor();
+	}
+	
+	public Protuberance NotFactor(){
+		if (CurrentToken().type.Equals("NOT")){
+			MatchAndEat("NOT");
+			Protuberance p = Relation();
+			return new NotOp(p);
+		}
+		return Relation();
+	}
+
+    public Protuberance Term() {
+        Protuberance result = SignedFactor();
+        while (CurrentToken().type.Equals("MULTIPLY") || CurrentToken().type.Equals("DIVIDE")|| CurrentToken().type.Equals("MOD")) {
+            switch (CurrentToken().type) {
+                case "MULTIPLY":
+                    result = new Operation("MULTIPLY",result,Multiply());
+                    break;
+                case "DIVIDE":
+                    result = new Operation("DIVIDE",result,Divide());
+                    break;
+				case "MOD":
+                    result = new Operation("MOD",result,Mod());
+                    break;
+            }
+        }
+		try{Console.WriteLine("term"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Term");}
+        return result;
+    }
+
+    public Protuberance ArithmeticExpression() {
+        Protuberance result = Term();
+        while (CurrentToken().type.Equals("ADD") || CurrentToken().type.Equals("SUBTRACT")) {
+            switch (CurrentToken().type) {
+                case "ADD":
+                    result = new Operation("ADD",result,Add());
+					try{Console.WriteLine("add"+result.opinion());}catch(NullReferenceException){Console.WriteLine("AE");}
+                    break;
+                case "SUBTRACT":
+                    result = new Operation("SUBTRACT",result,Subtract());
+                    try{
+					Console.WriteLine("sub"+result.opinion());
+					Console.WriteLine("sub"+Subtract().opinion());
+					}catch(NullReferenceException){Console.WriteLine("sub");}
+					break;
+            }
+        }
+        return result;
+    }
+	
+	public Protuberance Relation(){
+		Protuberance result = ArithmeticExpression();
+		String type = CurrentToken().type;
+		//if(type.Equals("EQUAL")||type.Equals("LESS")||type.Equals("GREATER")||type.Equals("LESSEQUAL")||type.Equals("GREATEREQUAL")){
+			switch(type){
+				case "EQUAL": result = Equal(result);
+								//Console.WriteLine(result.ToString());
+								break;
+				case "LESS": result = Less(result);break;
+				case "GREATER": result = Greater(result);break;
+				case "LESSEQUAL": result = LessEqual(result);break;
+				case "GREATEREQUAL": result = GreaterEqual(result);break;
+			}
+		//}
+		try{Console.WriteLine("Rel"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Rela");}
+		return result;
+	}
 	
 	public Protuberance v8Factor(){
 		return Relation();
 	}
 	
 	public Protuberance v8Term(){
-		Protuberance result = v8Factor();
+		Protuberance result = NotFactor();
 		while(CurrentToken().type.Equals("AND")){
 			MatchAndEat("AND");
-			result = new Operation("AND",result,v8Factor());
+			result = new Operation("AND",result,NotFactor());
 		}
-		try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Term");}
+		try{Console.WriteLine("v8Term"+result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Term");}
 		return result;
 	}
 	
@@ -191,9 +209,31 @@ public class Calculator {
 			MatchAndEat("OR");
 			result = new Operation("OR",result,v8Term());
 		}
-		try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Ex");}
+		try{Console.WriteLine("v8Expression"+result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Ex");}
 		return result;
 	}
+	
+	public void PrettyPrint(List<Token> tokens){
+		int numberCount = 0;
+		int opCount = 0;
+		foreach (Token token in tokens){
+			if (token.type == "NUMBER"){
+				Console.WriteLine("Number....: " + token.text);
+				numberCount++;
+			}
+			else{
+				Console.WriteLine("Operator..: " + token.type);
+				opCount++;
+			}
+		}
+		Console.WriteLine("You have got "+
+		numberCount +
+		" different number and " +
+		opCount
+		+" operators.");
+		
+	}
+
 
     public static void Main() {
 		while(true){
@@ -205,6 +245,8 @@ public class Calculator {
 			Calculator calc = new Calculator();
 			Tokenizer tokenizer = new Tokenizer();
 			calc.tokens = tokenizer.getTokens(expression);
+			calc.PrettyPrint(calc.tokens);
+			
 			Protuberance result = calc.v8Expression();
 			try{Console.WriteLine("Expression Result: " + result.opinion());}catch(NullReferenceException){Console.WriteLine("Main");}
 		}
@@ -335,6 +377,7 @@ public class Number : Protuberance {
     }
 	
     public override Object opinion() {
+		Console.WriteLine("Number opinion "+value);
         return value;
     }
 	
@@ -356,11 +399,57 @@ public class Boolean : Protuberance {
     }
 
     public override Object opinion() {
+		Console.WriteLine("Boolean opinion "+value);
         return value;
     }
 
     public String toString() {
         return value + "";
+    }
+}
+
+public class NotOp : Protuberance {
+
+    public Protuberance p;
+
+    public NotOp() { }
+
+    public NotOp(Protuberance p) {
+        this.p = p;
+    }
+
+    public bool ToBoolean(Protuberance p) {
+        Object result = p.opinion();
+        return Convert.ToBoolean(result);
+    }
+
+    public override Object opinion() {
+        Object result = !ToBoolean(p);
+		Console.WriteLine("NotOp opinion "+result);
+        return result;
+    }
+}
+
+
+public class NegOp : Protuberance {
+
+    public Protuberance p;
+
+    public NegOp() {}
+
+    public NegOp(Protuberance p) {
+        this.p = p;
+    }
+
+    public double ToDouble(Protuberance p) {
+        Object result = p.opinion();
+        return Convert.ToDouble(result);
+    }
+
+    public override Object opinion() {
+        Object result = (-ToDouble(p));
+		Console.WriteLine("NegOp opinion "+result);
+        return result;
     }
 }
 
@@ -381,11 +470,8 @@ public class Operation : Protuberance {
 
     public double ToDouble(Protuberance p) {
         Object result = p.opinion();
-		double r = 0;
-		try{
-		r = Double.Parse(result.ToString());
-		}catch(FormatException){Console.WriteLine("Aqui");}
-        return r;
+		Console.WriteLine("To double de operacion"+Double.Parse(result.ToString()));
+        return Double.Parse(result.ToString());
     }
 
     public bool ToBoolean(Protuberance p) {
@@ -405,6 +491,7 @@ public class Operation : Protuberance {
                 break;
             case "SUBTRACT":
                 result = (Object)(ToDouble(left) - ToDouble(right));
+				Console.WriteLine("Result de subs de oper"+result);
                 break;
             case "MULTIPLY":
                 result = (Object)(ToDouble(left) * ToDouble(right));
@@ -443,6 +530,7 @@ public class Operation : Protuberance {
                 result = Convert.ToBoolean(ToBoolean(left) && ToBoolean(right));
                 break;
         }
+		Console.WriteLine("Operation opinion "+result);
         return result;
     }
 }
