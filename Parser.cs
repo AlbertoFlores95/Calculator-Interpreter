@@ -2,11 +2,19 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 
-public class Calculator {
+public class Parser {
+	public Parser() {}
+	public Parser(List<Token> tokens){
+		this.tokens = tokens;
+	}
 
     public int currentTokenPosition = 0;
     public List<Token> tokens;
-
+	
+	public List<Token> getTokens(){
+		return tokens;
+	}
+	
     public Token GetToken(int offset) {
         if (currentTokenPosition + offset >= tokens.Count) {
             return new Token("", "NO_TOKEN");
@@ -25,13 +33,36 @@ public class Calculator {
     public Token MatchAndEat(String type) {
         Token token = CurrentToken();
         if (!CurrentToken().type.Equals(type)) {
-            //System.Environment.Exit(1);
+            System.Environment.Exit(1);
         }
         EatToken(1);
         return token;
     }
 	
-		public Protuberance Less(Protuberance v8Expression){
+	public Protuberance Statement(){
+		Protuberance node = null;
+		TokenType type = CurrentToken().type;
+		if (type == TokenType.PRINT){
+			MatchAndEat(TokenType.PRINT);
+			node = new PrintNode(Expression(), "sameline");
+		}
+		else if (type == TokenType.PRINTLN){
+			MatchAndEat(TokenType.PRINTLN);
+			node = new PrintNode(Expression(), "newline");
+		}
+		else if (type == TokenType.WAIT){
+			MatchAndEat(TokenType.WAIT);
+			node = new WaitNode(Expression());
+		}
+		else{
+			Console.WriteLine("Unknown language construct: "
+			+ CurrentToken().text);
+			//System.exit(0);
+		}
+		return node;
+	}
+	
+	public Protuberance Less(Protuberance v8Expression){
 		MatchAndEat("LESS");
 		return new Operation("LESS",v8Expression ,ArithmeticExpression());
 	}
@@ -44,6 +75,11 @@ public class Calculator {
 	public Protuberance Equal(Protuberance v8Expression){
 		MatchAndEat("EQUAL");
 		return new Operation("EQUAL",v8Expression ,ArithmeticExpression());
+	}
+	
+	public Protuberance NotEqual(Protuberance v8Expression){
+		MatchAndEat("NOTEQUAL");
+		return new Operation("NOTEQUAL",v8Expression ,ArithmeticExpression());
 	}
 	
 	public Protuberance Greater(Protuberance v8Expression){
@@ -95,13 +131,13 @@ public class Calculator {
         } else if (CurrentToken().type.Equals("NUMBER")) {
            Token token = MatchAndEat("NUMBER");
 		   result = new Number(Double.Parse(token.text));
-		   try{Console.WriteLine("factor"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Factor");}
+		   //try{Console.WriteLine("factor"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Factor");}
         }
         return result;
     }
 	
-	/*public Protuberance AlmostFactor() {
-        Protuberance result = Factor();
+	public Protuberance AlmostFactor() {
+        Protuberance result = SignedFactor();
         while (CurrentToken().type.Equals("POWER")) {
             switch (CurrentToken().type) {
                 case "POWER":
@@ -109,15 +145,15 @@ public class Calculator {
                     break;
             }
         }
-		//try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("AF");}
+		////try{Console.WriteLine(result.opinion());}catch(NullReferenceException){Console.WriteLine("AF");}
         return result;
-    }*/
+    }
 	
 	public Protuberance SignedFactor(){
 		if (CurrentToken().type.Equals("SUBTRACT")){
 			MatchAndEat("SUBTRACT");
 			Protuberance result = new NegOp(Factor());
-			try{Console.WriteLine("sub the sign"+result.opinion());}catch(NullReferenceException){Console.WriteLine("SF");}
+			//try{Console.WriteLine("sub the sign"+result.opinion());}catch(NullReferenceException){Console.WriteLine("SF");}
 			return result;
 		}
 		return Factor();
@@ -133,7 +169,7 @@ public class Calculator {
 	}
 
     public Protuberance Term() {
-        Protuberance result = SignedFactor();
+        Protuberance result = AlmostFactor();
         while (CurrentToken().type.Equals("MULTIPLY") || CurrentToken().type.Equals("DIVIDE")|| CurrentToken().type.Equals("MOD")) {
             switch (CurrentToken().type) {
                 case "MULTIPLY":
@@ -147,7 +183,7 @@ public class Calculator {
                     break;
             }
         }
-		try{Console.WriteLine("term"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Term");}
+		//try{Console.WriteLine("term"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Term");}
         return result;
     }
 
@@ -157,14 +193,14 @@ public class Calculator {
             switch (CurrentToken().type) {
                 case "ADD":
                     result = new Operation("ADD",result,Add());
-					try{Console.WriteLine("add"+result.opinion());}catch(NullReferenceException){Console.WriteLine("AE");}
+					//try{Console.WriteLine("add"+result.opinion());}catch(NullReferenceException){Console.WriteLine("AE");}
                     break;
                 case "SUBTRACT":
                     result = new Operation("SUBTRACT",result,Subtract());
-                    try{
-					Console.WriteLine("sub"+result.opinion());
-					Console.WriteLine("sub"+Subtract().opinion());
-					}catch(NullReferenceException){Console.WriteLine("sub");}
+                   // try{
+					//Console.WriteLine("sub"+result.opinion());
+					//Console.WriteLine("sub"+Subtract().opinion());
+					//}catch(NullReferenceException){Console.WriteLine("sub");}
 					break;
             }
         }
@@ -179,13 +215,14 @@ public class Calculator {
 				case "EQUAL": result = Equal(result);
 								//Console.WriteLine(result.ToString());
 								break;
+				case "NOTEQUAL": result = NotEqual(result);break;
 				case "LESS": result = Less(result);break;
 				case "GREATER": result = Greater(result);break;
 				case "LESSEQUAL": result = LessEqual(result);break;
 				case "GREATEREQUAL": result = GreaterEqual(result);break;
 			}
 		//}
-		try{Console.WriteLine("Rel"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Rela");}
+		//try{Console.WriteLine("Rel"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Rela");}
 		return result;
 	}
 	
@@ -199,7 +236,7 @@ public class Calculator {
 			MatchAndEat("AND");
 			result = new Operation("AND",result,NotFactor());
 		}
-		try{Console.WriteLine("v8Term"+result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Term");}
+		//try{Console.WriteLine("v8Term"+result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Term");}
 		return result;
 	}
 	
@@ -209,7 +246,7 @@ public class Calculator {
 			MatchAndEat("OR");
 			result = new Operation("OR",result,v8Term());
 		}
-		try{Console.WriteLine("v8Expression"+result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Ex");}
+		//try{Console.WriteLine("v8Expression"+result.opinion());}catch(NullReferenceException){Console.WriteLine("v8Ex");}
 		return result;
 	}
 	
@@ -226,31 +263,66 @@ public class Calculator {
 				opCount++;
 			}
 		}
-		Console.WriteLine("You have got "+
-		numberCount +
-		" different number and " +
-		opCount
-		+" operators.");
-		
+		Console.WriteLine("You have got "+numberCount +" different number and " +opCount+" operators.");
 	}
 
 
     public static void Main() {
-		while(true){
-			String expression = "";
-			Console.Write("Calculator# ");
-			expression = Console.ReadLine();
-			expression += " ";
-			
-			Calculator calc = new Calculator();
-			Tokenizer tokenizer = new Tokenizer();
+		/*Console.Write("Calculator# "); 
+		String expression = Console.ReadLine();*/
+		
+		Calculator calc = new Calculator();
+		Tokenizer tokenizer = new Tokenizer();
+		
+		/*List<String> expressionList = new List<String>();
+		expressionList.Add("(100*2+2)*2+5>=500 ");
+		expressionList.Add("((5+1)*100-2+3) ");
+		expressionList.Add("100-30/2+13>=10 ");
+		expressionList.Add("(853+92*5)*10-20/2+771 ");
+		expressionList.Add("(5)*2 ");
+		
+		List<Protuberance> commandList = new List<Protuberance>();
+		foreach(String expression in expressionList){
+			calc.currentTokenPosition = 0;
 			calc.tokens = tokenizer.getTokens(expression);
-			calc.PrettyPrint(calc.tokens);
-			
 			Protuberance result = calc.v8Expression();
-			try{Console.WriteLine("Expression Result: " + result.opinion());}catch(NullReferenceException){Console.WriteLine("Main");}
+			if(result!=null)
+				commandList.Add(result);
+			//calc.PrettyPrint(calc.tokens);
+			//try{Console.WriteLine("Expression Result: " + result.opinion());}catch(NullReferenceException){Console.WriteLine("Main");}
 		}
-    }
+		
+		foreach(Protuberance command in commandList){
+			Console.WriteLine("Result: "+command.opinion());
+		}*/
+		
+		/*String conditionExpr = ("1<10 ");
+		String bodyExpr = "10+20 ";
+		calc.tokens = tokenizer.getTokens(conditionExpr);
+		Protuberance result = calc.v8Expression();
+		bool condition = Convert.ToBoolean(result.opinion());
+		
+		calc.currentTokenPosition = 0;
+		calc.tokens = tokenizer.getTokens(bodyExpr);
+		Protuberance body = calc.v8Expression();
+		int count = 0;
+		while (condition == true){
+			int res = Convert.ToInt32(body.opinion());
+			Console.WriteLine(res);
+			if (count == 5) 
+				break;
+			count++;;
+		}*/
+		
+		Protuberance firstMsg = new Print(new Number(1), "newline");
+        Protuberance secondMsg = new Print(new Number(2), "newline");
+        List<Protuberance> script = new List<Protuberance>();
+        script.Add(firstMsg);
+        script.Add(secondMsg);
+        for (Protuberance statement : script) {
+            statement.opinion();
+        }
+	}
 }
 
 public class Token {
@@ -377,7 +449,7 @@ public class Number : Protuberance {
     }
 	
     public override Object opinion() {
-		Console.WriteLine("Number opinion "+value);
+		//Console.WriteLine("Number opinion "+value);
         return value;
     }
 	
@@ -399,7 +471,7 @@ public class Boolean : Protuberance {
     }
 
     public override Object opinion() {
-		Console.WriteLine("Boolean opinion "+value);
+		//Console.WriteLine("Boolean opinion "+value);
         return value;
     }
 
@@ -407,6 +479,55 @@ public class Boolean : Protuberance {
         return value + "";
     }
 }
+
+
+public class Print : Protuberance {
+
+    public Protuberance expression;
+    public String type;
+
+    public Print() {
+    }
+
+    public Print(Protuberance expression, String type) {
+        this.expression = expression;
+        this.type = type;
+    }
+
+    public override Object opinion() {
+        Object writee = expression.opinion();
+        if (type.equals("sameline")) {
+            Console.Write(writee);
+        } else if (type.equals("newline")) {
+            Console.WriteLine(writee);
+        }
+        return writee;
+    }
+}
+
+
+/*public class Variable : Protuberance {
+
+    public String varName;
+    public Calculator calc;
+
+    public Variable() { }
+
+    public Variable(String varName, Calculator calc) {
+        this.varName = varName;
+        this.calc = calc;
+    }
+
+    public override Object opinion() {
+        Object varValue = calc.getVariable(varName);
+        if (varValue == null) {
+            Util.Writeln("Undefined Variable...Var Name: " + varName);
+            System.exit(1);
+        }
+        return varValue;
+    }
+}*/
+
 
 public class NotOp : Protuberance {
 
@@ -425,7 +546,7 @@ public class NotOp : Protuberance {
 
     public override Object opinion() {
         Object result = !ToBoolean(p);
-		Console.WriteLine("NotOp opinion "+result);
+		//Console.WriteLine("NotOp opinion "+result);
         return result;
     }
 }
@@ -448,7 +569,7 @@ public class NegOp : Protuberance {
 
     public override Object opinion() {
         Object result = (-ToDouble(p));
-		Console.WriteLine("NegOp opinion "+result);
+		//Console.WriteLine("NegOp opinion "+result);
         return result;
     }
 }
@@ -470,7 +591,7 @@ public class Operation : Protuberance {
 
     public double ToDouble(Protuberance p) {
         Object result = p.opinion();
-		Console.WriteLine("To double de operacion"+Double.Parse(result.ToString()));
+		//Console.WriteLine("To double de operacion"+Double.Parse(result.ToString()));
         return Double.Parse(result.ToString());
     }
 
@@ -491,14 +612,14 @@ public class Operation : Protuberance {
                 break;
             case "SUBTRACT":
                 result = (Object)(ToDouble(left) - ToDouble(right));
-				Console.WriteLine("Result de subs de oper"+result);
+				//Console.WriteLine("Result de subs de oper"+result);
                 break;
             case "MULTIPLY":
                 result = (Object)(ToDouble(left) * ToDouble(right));
                 break;
             case "DIVIDE":
                 if (ToDouble(right) == 0) {
-                    Console.WriteLine("Error: Division by Zero!");
+                    //Console.WriteLine("Error: Division by Zero!");
                     System.Environment.Exit(1);
                 }
                 result = (Object)(ToDouble(left) / ToDouble(right));
@@ -530,7 +651,7 @@ public class Operation : Protuberance {
                 result = Convert.ToBoolean(ToBoolean(left) && ToBoolean(right));
                 break;
         }
-		Console.WriteLine("Operation opinion "+result);
+		//Console.WriteLine("Operation opinion "+result);
         return result;
     }
 }
