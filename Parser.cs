@@ -89,12 +89,44 @@ public class Parser {
 			MatchAndEat("PRINTLN");
 			node = new Print(v8Expression(), "newline");
 		}
+		else if (type.Equals("WHILE")){
+			node = While();
+		}
+		else if (type.Equals("IF")){
+			node = If();
+		}
+		/*else if (type.Equals("FUNCTION")){
+			node = Function();
+		}*/
 		else{
 			//Console.WriteLine("Unknown language construct: "+ CurrentToken().text);
 			node = new Print(v8Expression(),"newline");
 			//System.Environment.Exit(1);
 		}
 		return node;
+	}
+	
+	public Node While(){
+		Node condition, body;
+		MatchAndEat("WHILE");
+		condition = v8Expression();
+		body = Block();
+		return new WhileNode(condition, body);
+	}
+	
+	public Node If(){
+		Node condition=null, thenPart=null, elsePart=null;
+		MatchAndEat("IF");
+		condition = v8Expression();
+		thenPart = Block();
+		if ( CurrentToken().type.Equals("ELSE") ){
+			MatchAndEat("ELSE");
+		if ( CurrentToken().type.Equals("IF") ) 
+			elsePart = If();
+		else 
+			elsePart = Block();
+		}
+		return new IfNode(condition, thenPart, elsePart);
 	}
 	
 	public Node Variable(){
@@ -312,13 +344,14 @@ public class Parser {
 		Console.WriteLine("You have got "+numberCount +" different number and " +opCount+" operators.");
 	}
 	
-	public List<Node> Block(){
+	public BlockObject Block(){
 		List<Node> statements = new List<Node>();
 		while ( !(CurrentToken().type.Equals("END"))){
 			statements.Add(Statement());
 		}
 		MatchAndEat("END");
-		return statements;
+		//List bo =
+		return new BlockObject(statements);
 	}
 }
 
@@ -349,11 +382,12 @@ public class Interpreter {
 			
             if (debug) DumpTokens(parser);
 			parser.MatchAndEat("DS");
-            List<Node> script = parser.Block();
+            Node script = parser.Block();
 
-			foreach (Node statement in script)
-                statement.opinion();
-            }
+			script.opinion();
+			/*foreach (Node statement in script)
+                statement.opinion();*/
+        }
 
         public void DumpTokens(Parser parser){
 			foreach (Token token in parser.getTokens())
@@ -421,10 +455,14 @@ public class Tokenizer {
 	public String FindStatementType(String str){
 		String type = "UNKNOWN";
 		switch(str){
-			case "dilansharp": type = "DS";break;
+			case "shabosharp": type = "DS";break;
 			case "end": type = "END";break;
 			case "print":  type = "PRINT";break;
 			case "println":type = "PRINTLN";break;
+			case "while":type = "WHILE";break;
+			case "if":type = "IF";break;
+			case "else":type = "ELSE";break;
+			//case "function":type = "FUNCTION";break;
 			default:       type = "KEYWORD";break;
 		}
 		return type;
@@ -517,6 +555,71 @@ public class Tokenizer {
 public abstract class Node{
 	public Node(){}
 	public abstract Object opinion();
+}
+
+public class IfNode : Node{
+	public Node condition;
+	public Node thenPart;
+	public Node elsePart;
+	public IfNode() {}
+	public IfNode(Node condition, Node thenPart, Node elsePart){
+		this.condition = condition;
+		this.thenPart = thenPart;
+		this.elsePart = elsePart;
+	}
+	public override Object opinion(){
+		Object ret = null;
+		if ( (condition != null) && (thenPart != null))
+		if ( Convert.ToBoolean(condition.opinion()) )
+			ret = thenPart.opinion();
+		if ( (condition != null) && (elsePart != null))
+		if ( !(Convert.ToBoolean(condition.opinion())) )
+			ret = elsePart.opinion();
+		return ret;
+	}
+}
+
+public class WhileNode : Node{
+	public Node condition;
+	public Node body;
+	public WhileNode() {}
+	public WhileNode(Node condition, Node body){
+		this.condition = condition;
+		this.body = body;
+	}
+	public override Object opinion(){
+		Object ret = null;
+		while ( Convert.ToBoolean(condition.opinion())){
+			ret = body.opinion();
+		}
+		return ret;
+	}
+}
+
+public class BlockObject : Node{
+	private List<Node> statements;
+	public BlockObject(List<Node> statements){
+		this.statements = statements;
+	}
+	public override Object opinion(){
+		Object ret = null;
+		foreach (Node statement in statements){
+			ret = statement.opinion();
+		}
+		return ret;
+	}
+	public Node get(int index){
+		return statements[index];
+	}
+	protected List<Node> getStatements(){
+		return statements;
+	}
+	public String toString(){
+		String str = "";
+		foreach (Node statement in statements)
+		str = str + statement + "\n";
+		return str;
+	}
 }
 
 public class Number : Node {
