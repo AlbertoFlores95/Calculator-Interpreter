@@ -2,10 +2,24 @@ $Esto es un commentario
 
 dilansharp
 
-x=EULER
-x
+
 EULER
-EULER=5
+PI
+println ""
+
+
+5+3*8
+
+
+x = (-100<100)
+y = (5<3)
+z = ((-100<100)|(5<3))
+x
+y
+z
+!z
+5+3
+PI=5
 
 
 end

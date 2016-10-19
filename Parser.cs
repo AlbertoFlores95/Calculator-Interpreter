@@ -59,6 +59,7 @@ public class Parser {
     public Token MatchAndEat(String type) {
         Token token = CurrentToken();
         if (!CurrentToken().type.Equals(type)) {
+			Console.WriteLine("Error: Expecting "+ CurrentToken().type+".Found "+type);
             System.Environment.Exit(1);
         }
         EatToken(1);
@@ -319,62 +320,6 @@ public class Parser {
 		MatchAndEat("END");
 		return statements;
 	}
-
-    /*public static void Main() {
-		//Console.Write("Calculator# "); String expression = Console.ReadLine();
-		
-		Calculator calc = new Calculator();
-		Tokenizer tokenizer = new Tokenizer();
-		
-		List<String> expressionList = new List<String>();
-		expressionList.Add("(100*2+2)*2+5>=500 ");
-		expressionList.Add("((5+1)*100-2+3) ");
-		expressionList.Add("100-30/2+13>=10 ");
-		expressionList.Add("(853+92*5)*10-20/2+771 ");
-		expressionList.Add("(5)*2 ");
-		
-		List<Node> commandList = new List<Node>();
-		foreach(String expression in expressionList){
-			calc.currentTokenPosition = 0;
-			calc.tokens = tokenizer.getTokens(expression);
-			Node result = calc.v8Expression();
-			if(result!=null)
-				commandList.Add(result);
-			//calc.PrettyPrint(calc.tokens);
-			//try{Console.WriteLine("Expression Result: " + result.opinion());}catch(NullReferenceException){Console.WriteLine("Main");}
-		}
-		
-		foreach(Node command in commandList){
-			Console.WriteLine("Result: "+command.opinion());
-		}
-		
-		String conditionExpr = ("1<10 ");
-		String bodyExpr = "10+20 ";
-		calc.tokens = tokenizer.getTokens(conditionExpr);
-		Node result = calc.v8Expression();
-		bool condition = Convert.ToBoolean(result.opinion());
-		
-		calc.currentTokenPosition = 0;
-		calc.tokens = tokenizer.getTokens(bodyExpr);
-		Node body = calc.v8Expression();
-		int count = 0;
-		while (condition == true){
-			int res = Convert.ToInt32(body.opinion());
-			Console.WriteLine(res);
-			if (count == 5) 
-				break;
-			count++;;
-		}
-		
-		Node firstMsg = new Print(new Number(1), "newline");
-        Node secondMsg = new Print(new Number(2), "newline");
-        List<Node> script = new List<Node>();
-        script.Add(firstMsg);
-        script.Add(secondMsg);
-        for (Node statement : script) {
-            statement.opinion();
-        }
-	}*/
 }
 
 public class Interpreter {
