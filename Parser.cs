@@ -3,6 +3,28 @@ using System.Collections;
 using System.Collections.Generic;
 
 public class Parser {
+	Dictionary<string, Object> symbolTable = new Dictionary<string, Object>();
+	
+	public Object setVariable(String name, Object value){
+		if(symbolTable.ContainsKey(name)){
+			if((name.Equals("PI"))||(name.Equals("EULER"))){
+				Console.WriteLine("Reserved Word: "+ name);
+				System.Environment.Exit(1);
+			}
+			symbolTable[name] = value;
+		}
+		else
+			symbolTable.Add(name, value);
+		return value;
+	}
+	public Object getVariable(String name){
+		Object value;
+		symbolTable.TryGetValue(name,out value);
+		if (value != null) 
+			return value;
+		return null;
+	}
+
 	public Parser() {}
 	public Parser(List<Token> tokens){
 		this.tokens = tokens;
@@ -25,6 +47,10 @@ public class Parser {
     public Token CurrentToken() {
         return GetToken(0);
     }
+	
+	public Token NextToken() {
+        return GetToken(1);
+    }
 
     public void EatToken(int offset) {
         currentTokenPosition = currentTokenPosition + offset;
@@ -39,105 +65,124 @@ public class Parser {
         return token;
     }
 	
-	public Protuberance Statement(){
-		Protuberance node = null;
-		TokenType type = CurrentToken().type;
-		if (type == TokenType.PRINT){
-			MatchAndEat(TokenType.PRINT);
-			node = new PrintNode(Expression(), "sameline");
+	public Node Assignment(){
+		Node node = null;
+		String name = MatchAndEat("KEYWORD").text;
+		MatchAndEat("ASSIGNMENT");
+		Node value = v8Expression();
+		node = new AssignmentObject(name, value, this);
+		return node;
+	}
+	
+	public Node Statement(){
+		Node node = null;
+		String type = CurrentToken().type;
+		if((type.Equals("KEYWORD"))&&(NextToken().type.Equals("ASSIGNMENT"))){
+			node = Assignment();
 		}
-		else if (type == TokenType.PRINTLN){
-			MatchAndEat(TokenType.PRINTLN);
-			node = new PrintNode(Expression(), "newline");
+		else if (type.Equals("PRINT")){
+			MatchAndEat("PRINT");
+			node = new Print(v8Expression(), "sameline");
 		}
-		else if (type == TokenType.WAIT){
-			MatchAndEat(TokenType.WAIT);
-			node = new WaitNode(Expression());
+		else if (type.Equals("PRINTLN")){
+			MatchAndEat("PRINTLN");
+			node = new Print(v8Expression(), "newline");
 		}
 		else{
-			Console.WriteLine("Unknown language construct: "
-			+ CurrentToken().text);
-			//System.exit(0);
+			//Console.WriteLine("Unknown language construct: "+ CurrentToken().text);
+			node = new Print(v8Expression(),"newline");
+			//System.Environment.Exit(1);
 		}
 		return node;
 	}
 	
-	public Protuberance Less(Protuberance v8Expression){
+	public Node Variable(){
+		Token token = MatchAndEat("KEYWORD");
+		Node node = new VariableObject(token.text, this);
+		return node;
+	}
+	
+	public Node Less(Node v8Expression){
 		MatchAndEat("LESS");
 		return new Operation("LESS",v8Expression ,ArithmeticExpression());
 	}
 	
-	public Protuberance LessEqual(Protuberance v8Expression){
+	public Node LessEqual(Node v8Expression){
 		MatchAndEat("LESSEQUAL");
 		return new Operation("LESSEQUAL",v8Expression ,ArithmeticExpression());
 	}
 	
-	public Protuberance Equal(Protuberance v8Expression){
+	public Node Equal(Node v8Expression){
 		MatchAndEat("EQUAL");
 		return new Operation("EQUAL",v8Expression ,ArithmeticExpression());
 	}
 	
-	public Protuberance NotEqual(Protuberance v8Expression){
+	public Node NotEqual(Node v8Expression){
 		MatchAndEat("NOTEQUAL");
 		return new Operation("NOTEQUAL",v8Expression ,ArithmeticExpression());
 	}
 	
-	public Protuberance Greater(Protuberance v8Expression){
+	public Node Greater(Node v8Expression){
 		MatchAndEat("GREATER");
 		return new Operation("GREATER",v8Expression ,ArithmeticExpression());
 	}
 	
-	public Protuberance GreaterEqual(Protuberance v8Expression){
+	public Node GreaterEqual(Node v8Expression){
 		MatchAndEat("GREATEREQUAL");
 		return new Operation("GREATEREQUAL",v8Expression ,ArithmeticExpression());
 	}
 
-	public Protuberance Power() {
+	public Node Power() {
         MatchAndEat("POWER");
         return Factor();
     }
 	
-	public Protuberance Mod() {
+	public Node Mod() {
         MatchAndEat("MOD");
         return Factor();
     }
 	
-    public Protuberance Multiply() {
+    public Node Multiply() {
         MatchAndEat("MULTIPLY");
         return Factor();
     }
 
-    public Protuberance Divide() {
+    public Node Divide() {
         MatchAndEat("DIVIDE");
         return Factor();
     }
 
-    public Protuberance Add() {
+    public Node Add() {
         MatchAndEat("ADD");
         return Term();
     }
 
-    public Protuberance Subtract() {
+    public Node Subtract() {
         MatchAndEat("SUBTRACT");
         return Term();
     }
 
-    public Protuberance Factor() {
-        Protuberance result = null;
+    public Node Factor() {
+        Node result = null;
         if (CurrentToken().type.Equals("LEFT_PAREN")) {
             MatchAndEat("LEFT_PAREN");
             result = v8Expression();
             MatchAndEat("RIGHT_PAREN");
         } else if (CurrentToken().type.Equals("NUMBER")) {
-           Token token = MatchAndEat("NUMBER");
-		   result = new Number(Double.Parse(token.text));
+			Token token = MatchAndEat("NUMBER");
+			result = new Number(Double.Parse(token.text));
 		   //try{Console.WriteLine("factor"+result.opinion());}catch(NullReferenceException){Console.WriteLine("Factor");}
-        }
+        } else if(CurrentToken().type.Equals("STRING")){
+			Token token = MatchAndEat("STRING");
+			result = new StringVar(token.text);
+		} else if(CurrentToken().type.Equals("KEYWORD")){
+			result = Variable();
+		}
         return result;
     }
 	
-	public Protuberance AlmostFactor() {
-        Protuberance result = SignedFactor();
+	public Node AlmostFactor() {
+        Node result = SignedFactor();
         while (CurrentToken().type.Equals("POWER")) {
             switch (CurrentToken().type) {
                 case "POWER":
@@ -149,27 +194,27 @@ public class Parser {
         return result;
     }
 	
-	public Protuberance SignedFactor(){
+	public Node SignedFactor(){
 		if (CurrentToken().type.Equals("SUBTRACT")){
 			MatchAndEat("SUBTRACT");
-			Protuberance result = new NegOp(Factor());
+			Node result = new NegOp(Factor());
 			//try{Console.WriteLine("sub the sign"+result.opinion());}catch(NullReferenceException){Console.WriteLine("SF");}
 			return result;
 		}
 		return Factor();
 	}
 	
-	public Protuberance NotFactor(){
+	public Node NotFactor(){
 		if (CurrentToken().type.Equals("NOT")){
 			MatchAndEat("NOT");
-			Protuberance p = Relation();
+			Node p = Relation();
 			return new NotOp(p);
 		}
 		return Relation();
 	}
 
-    public Protuberance Term() {
-        Protuberance result = AlmostFactor();
+    public Node Term() {
+        Node result = AlmostFactor();
         while (CurrentToken().type.Equals("MULTIPLY") || CurrentToken().type.Equals("DIVIDE")|| CurrentToken().type.Equals("MOD")) {
             switch (CurrentToken().type) {
                 case "MULTIPLY":
@@ -187,8 +232,8 @@ public class Parser {
         return result;
     }
 
-    public Protuberance ArithmeticExpression() {
-        Protuberance result = Term();
+    public Node ArithmeticExpression() {
+        Node result = Term();
         while (CurrentToken().type.Equals("ADD") || CurrentToken().type.Equals("SUBTRACT")) {
             switch (CurrentToken().type) {
                 case "ADD":
@@ -207,8 +252,8 @@ public class Parser {
         return result;
     }
 	
-	public Protuberance Relation(){
-		Protuberance result = ArithmeticExpression();
+	public Node Relation(){
+		Node result = ArithmeticExpression();
 		String type = CurrentToken().type;
 		//if(type.Equals("EQUAL")||type.Equals("LESS")||type.Equals("GREATER")||type.Equals("LESSEQUAL")||type.Equals("GREATEREQUAL")){
 			switch(type){
@@ -226,12 +271,12 @@ public class Parser {
 		return result;
 	}
 	
-	public Protuberance v8Factor(){
+	public Node v8Factor(){
 		return Relation();
 	}
 	
-	public Protuberance v8Term(){
-		Protuberance result = NotFactor();
+	public Node v8Term(){
+		Node result = NotFactor();
 		while(CurrentToken().type.Equals("AND")){
 			MatchAndEat("AND");
 			result = new Operation("AND",result,NotFactor());
@@ -240,8 +285,8 @@ public class Parser {
 		return result;
 	}
 	
-	public Protuberance v8Expression(){
-		Protuberance result = v8Term();
+	public Node v8Expression(){
+		Node result = v8Term();
 		while(CurrentToken().type.Equals("OR")){
 			MatchAndEat("OR");
 			result = new Operation("OR",result,v8Term());
@@ -265,46 +310,53 @@ public class Parser {
 		}
 		Console.WriteLine("You have got "+numberCount +" different number and " +opCount+" operators.");
 	}
+	
+	public List<Node> Block(){
+		List<Node> statements = new List<Node>();
+		while ( !(CurrentToken().type.Equals("END"))){
+			statements.Add(Statement());
+		}
+		MatchAndEat("END");
+		return statements;
+	}
 
-
-    public static void Main() {
-		/*Console.Write("Calculator# "); 
-		String expression = Console.ReadLine();*/
+    /*public static void Main() {
+		//Console.Write("Calculator# "); String expression = Console.ReadLine();
 		
 		Calculator calc = new Calculator();
 		Tokenizer tokenizer = new Tokenizer();
 		
-		/*List<String> expressionList = new List<String>();
+		List<String> expressionList = new List<String>();
 		expressionList.Add("(100*2+2)*2+5>=500 ");
 		expressionList.Add("((5+1)*100-2+3) ");
 		expressionList.Add("100-30/2+13>=10 ");
 		expressionList.Add("(853+92*5)*10-20/2+771 ");
 		expressionList.Add("(5)*2 ");
 		
-		List<Protuberance> commandList = new List<Protuberance>();
+		List<Node> commandList = new List<Node>();
 		foreach(String expression in expressionList){
 			calc.currentTokenPosition = 0;
 			calc.tokens = tokenizer.getTokens(expression);
-			Protuberance result = calc.v8Expression();
+			Node result = calc.v8Expression();
 			if(result!=null)
 				commandList.Add(result);
 			//calc.PrettyPrint(calc.tokens);
 			//try{Console.WriteLine("Expression Result: " + result.opinion());}catch(NullReferenceException){Console.WriteLine("Main");}
 		}
 		
-		foreach(Protuberance command in commandList){
+		foreach(Node command in commandList){
 			Console.WriteLine("Result: "+command.opinion());
-		}*/
+		}
 		
-		/*String conditionExpr = ("1<10 ");
+		String conditionExpr = ("1<10 ");
 		String bodyExpr = "10+20 ";
 		calc.tokens = tokenizer.getTokens(conditionExpr);
-		Protuberance result = calc.v8Expression();
+		Node result = calc.v8Expression();
 		bool condition = Convert.ToBoolean(result.opinion());
 		
 		calc.currentTokenPosition = 0;
 		calc.tokens = tokenizer.getTokens(bodyExpr);
-		Protuberance body = calc.v8Expression();
+		Node body = calc.v8Expression();
 		int count = 0;
 		while (condition == true){
 			int res = Convert.ToInt32(body.opinion());
@@ -312,24 +364,62 @@ public class Parser {
 			if (count == 5) 
 				break;
 			count++;;
-		}*/
+		}
 		
-		Protuberance firstMsg = new Print(new Number(1), "newline");
-        Protuberance secondMsg = new Print(new Number(2), "newline");
-        List<Protuberance> script = new List<Protuberance>();
+		Node firstMsg = new Print(new Number(1), "newline");
+        Node secondMsg = new Print(new Number(2), "newline");
+        List<Node> script = new List<Node>();
         script.Add(firstMsg);
         script.Add(secondMsg);
-        for (Protuberance statement : script) {
+        for (Node statement : script) {
             statement.opinion();
         }
-	}
+	}*/
+}
+
+public class Interpreter {
+        public static void Main(){
+            string[] args = {"input.ds"};
+			bool debug = false;
+            if (args.Length < 1) {
+                Console.WriteLine("Usage: Demo <script>");
+                return;
+                }
+
+            if (args.Length > 1) {
+                if (args[1].Equals("debug")) debug = true;
+                }
+			
+            Interpreter interpreter = new Interpreter();
+            String sourceCode = System.IO.File.ReadAllText(args[0])+" ";
+            interpreter.Interpret(sourceCode, debug);
+        }
+
+        public void Interpret(String source, bool debug){
+            Tokenizer tokenizer = new Tokenizer();
+			
+            Parser parser = new Parser(tokenizer.getTokens(source));
+			parser.setVariable("PI",3.14159265358979);
+			parser.setVariable("EULER",2.718281828459045);
+			
+            if (debug) DumpTokens(parser);
+			parser.MatchAndEat("DS");
+            List<Node> script = parser.Block();
+
+			foreach (Node statement in script)
+                statement.opinion();
+            }
+
+        public void DumpTokens(Parser parser){
+			foreach (Token token in parser.getTokens())
+                Console.WriteLine("Type: " + token.type + " Text: " + token.text+" ");
+				Console.WriteLine();
+            }
 }
 
 public class Token {
-
     public String text;
     public String type;
-
     public Token(String text, String type) {
         this.text = text;
         this.type = type;
@@ -360,7 +450,7 @@ public class Tokenizer {
 					 	if(next=='=') 
 							type = "GREATEREQUAL";
 					 	break;
-			case '=': type = "ASSIGMENT"; 
+			case '=': type = "ASSIGNMENT"; 
 					 	if(next=='=') 
 							type = "EQUAL";
 					 	break;
@@ -379,6 +469,18 @@ public class Tokenizer {
 		switch(chr){
 			case '(': type = "LEFT_PAREN"; break;
             case ')': type = "RIGHT_PAREN"; break;
+		}
+		return type;
+	}
+	
+	public String FindStatementType(String str){
+		String type = "UNKNOWN";
+		switch(str){
+			case "dilansharp": type = "DS";break;
+			case "end": type = "END";break;
+			case "print":  type = "PRINT";break;
+			case "println":type = "PRINTLN";break;
+			default:       type = "KEYWORD";break;
 		}
 		return type;
 	}
@@ -405,6 +507,13 @@ public class Tokenizer {
                     } else if((chr=='(')||(chr==')')){
 						String par = FindParentType(chr);
 						tokens.Add(new Token((""+chr),par));
+					} else if (Char.IsLetter(chr)){
+						tokenString += chr;
+						state = "KEYWORD";
+					} else if(chr == '"'){
+						state = "STRING";
+					} else if(chr == '$'){
+						state = "COMMENT";
 					}
                     break;
 				case "OPERATOR":
@@ -428,18 +537,44 @@ public class Tokenizer {
                         index--;
                     }
                     break;
+				case "KEYWORD":
+					if (Char.IsLetterOrDigit(chr)){					
+						tokenString += chr;					
+					}					
+					else					{
+						String type = FindStatementType(tokenString);					
+						tokens.Add(new Token(tokenString, type));					
+						tokenString = "";					
+						state = "DEFAULT";					
+						index--;					
+					}					
+					break;
+				case "STRING":
+					if (chr == '"'){
+						tokens.Add(new Token(tokenString, "STRING"));
+						tokenString = "";
+						state = "DEFAULT";
+					}
+					else{
+						tokenString += chr;
+					}
+					break;
+				case "COMMENT":
+					if(chr == '\n')
+						state = "DEFAULT";
+					break;
             }
         }
         return tokens;
     }
 }
 
-public abstract class Protuberance{
-	public Protuberance(){}
+public abstract class Node{
+	public Node(){}
 	public abstract Object opinion();
 }
 
-public class Number : Protuberance {
+public class Number : Node {
     double value;
 	
     public Number() {}
@@ -459,7 +594,7 @@ public class Number : Protuberance {
 }
 
 
-public class Boolean : Protuberance {
+public class Boolean : Node {
 
     bool value;
 
@@ -480,25 +615,36 @@ public class Boolean : Protuberance {
     }
 }
 
+public class StringVar : Node{
+	String text;
+	public StringVar() {}
+	public StringVar(String text){
+		this.text = text;
+	}
+	public override Object opinion(){
+		return text;
+	}
+}
 
-public class Print : Protuberance {
 
-    public Protuberance expression;
+public class Print : Node {
+
+    public Node expression;
     public String type;
 
     public Print() {
     }
 
-    public Print(Protuberance expression, String type) {
+    public Print(Node expression, String type) {
         this.expression = expression;
         this.type = type;
     }
 
     public override Object opinion() {
         Object writee = expression.opinion();
-        if (type.equals("sameline")) {
+        if (type.Equals("sameline")) {
             Console.Write(writee);
-        } else if (type.equals("newline")) {
+        } else if (type.Equals("newline")) {
             Console.WriteLine(writee);
         }
         return writee;
@@ -506,40 +652,57 @@ public class Print : Protuberance {
 }
 
 
-/*public class Variable : Protuberance {
+public class VariableObject : Node {
 
     public String varName;
-    public Calculator calc;
+    public Parser parser;
 
-    public Variable() { }
+    public VariableObject() { }
 
-    public Variable(String varName, Calculator calc) {
+    public VariableObject(String varName, Parser parser) {
         this.varName = varName;
-        this.calc = calc;
+        this.parser = parser;
     }
 
     public override Object opinion() {
-        Object varValue = calc.getVariable(varName);
+        Object varValue = parser.getVariable(varName);
         if (varValue == null) {
-            Util.Writeln("Undefined Variable...Var Name: " + varName);
-            System.exit(1);
+            Console.WriteLine("Undefined Variable...Var Name: " + varName);
+            System.Environment.Exit(1);
         }
         return varValue;
     }
-}*/
+}
+
+public class AssignmentObject : Node{
+	public String name;
+	public Node value;
+	public Parser parser;
+	public String scope;
+	
+	public AssignmentObject() {}
+	public AssignmentObject(String name, Node value, Parser parser){
+		this.name = name;
+		this.value = value;
+		this.parser = parser;
+	}
+	public override Object opinion(){
+		return parser.setVariable(name, value.opinion());
+	}
+}
 
 
-public class NotOp : Protuberance {
+public class NotOp : Node {
 
-    public Protuberance p;
+    public Node p;
 
     public NotOp() { }
 
-    public NotOp(Protuberance p) {
+    public NotOp(Node p) {
         this.p = p;
     }
 
-    public bool ToBoolean(Protuberance p) {
+    public bool ToBoolean(Node p) {
         Object result = p.opinion();
         return Convert.ToBoolean(result);
     }
@@ -552,17 +715,17 @@ public class NotOp : Protuberance {
 }
 
 
-public class NegOp : Protuberance {
+public class NegOp : Node {
 
-    public Protuberance p;
+    public Node p;
 
     public NegOp() {}
 
-    public NegOp(Protuberance p) {
+    public NegOp(Node p) {
         this.p = p;
     }
 
-    public double ToDouble(Protuberance p) {
+    public double ToDouble(Node p) {
         Object result = p.opinion();
         return Convert.ToDouble(result);
     }
@@ -574,33 +737,33 @@ public class NegOp : Protuberance {
     }
 }
 
-public class Operation : Protuberance {
+public class Operation : Node {
 
     public String op;
-    public Protuberance left;
-    public Protuberance right;
+    public Node left;
+    public Node right;
 
     public Operation() {
     }
 
-    public Operation(String op, Protuberance left, Protuberance right) {
+    public Operation(String op, Node left, Node right) {
         this.op = op;
         this.left = left;
         this.right = right;
     }
 
-    public double ToDouble(Protuberance p) {
+    public double ToDouble(Node p) {
         Object result = p.opinion();
 		//Console.WriteLine("To double de operacion"+Double.Parse(result.ToString()));
         return Double.Parse(result.ToString());
     }
 
-    public bool ToBoolean(Protuberance p) {
+    public bool ToBoolean(Node p) {
         Object result = p.opinion();
         return Convert.ToBoolean(result);
     }
 
-    public Object ToObject(Protuberance p) {
+    public Object ToObject(Node p) {
         return p.opinion();
     }
 
