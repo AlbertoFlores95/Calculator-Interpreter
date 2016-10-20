@@ -95,15 +95,67 @@ public class Parser {
 		else if (type.Equals("IF")){
 			node = If();
 		}
-		/*else if (type.Equals("FUNCTION")){
-			node = Function();
-		}*/
+		else if ((type.Equals("FUNCTION"))&&(NextToken().type.Equals("KEYWORD"))){
+			node = FunctionDefinition();
+		}
+		else if ((type.Equals("KEYWORD"))&&(NextToken().type.Equals("LEFT_PAREN"))){
+			node = FunctionCall();
+		}
 		else{
 			//Console.WriteLine("Unknown language construct: "+ CurrentToken().text);
 			node = new Print(v8Expression(),"newline");
 			//System.Environment.Exit(1);
 		}
 		return node;
+	}
+	
+	public Object ExecuteFunction(Function function, List<BoundParameter> boundParameters){
+		Dictionary<string, Object> savedSymbolTable = new Dictionary<string, Object>();
+		savedSymbolTable = symbolTable;
+		for (int index = 0; index < boundParameters.Count; index++){
+			BoundParameter param = (BoundParameter) boundParameters[index];
+			setVariable(param.getName(), param.getValue());
+		}
+		Object ret = function.opinion();
+		symbolTable = savedSymbolTable;
+		return ret;
+	}
+	
+	public Node FunctionCall(){
+		String functionName = MatchAndEat("KEYWORD").text;
+		Node calleeFunctionName = new VariableObject(functionName, this);
+		MatchAndEat("LEFT_PAREN");
+		List<Parameter> actualParameters = FunctionCallParameters();
+		MatchAndEat("RIGHT_PAREN");
+		Node functionCallNode = new FunctionCallNode(calleeFunctionName, actualParameters, this);
+		return functionCallNode;
+	}
+	
+	public List<Parameter> FunctionCallParameters(){
+		List<Parameter> actualParameters = null;
+		Node expression = v8Expression();
+		if (expression != null){
+			actualParameters = new List<Parameter>();
+			actualParameters.Add(new Parameter(expression));
+			while (CurrentToken().type.Equals("COMMA")){
+				MatchAndEat("COMMA");
+				actualParameters.Add(new Parameter(v8Expression()));
+			}
+		}
+		return actualParameters;
+	}
+	
+	public List<Parameter> FunctionDefParameters(){
+		List<Parameter> parameters = null;
+		if (CurrentToken().type == "KEYWORD"){
+			parameters = new List<Parameter>();
+			parameters.Add(new Parameter(MatchAndEat("KEYWORD").text));
+			while (CurrentToken().type.Equals("COMMA")){
+				MatchAndEat("COMMA");
+				parameters.Add(new Parameter(MatchAndEat("KEYWORD").text));
+			}
+		}
+		return parameters;
 	}
 	
 	public Node While(){
@@ -129,9 +181,26 @@ public class Parser {
 		return new IfNode(condition, thenPart, elsePart);
 	}
 	
+	public Node FunctionDefinition(){
+		MatchAndEat("FUNCTION");
+		String functionName = MatchAndEat("KEYWORD").text;
+		MatchAndEat("LEFT_PAREN");
+		List<Parameter> parameters = FunctionDefParameters();
+		MatchAndEat("RIGHT_PAREN");
+		Node functionBody = Block();
+		Function function = new Function(functionName, functionBody, parameters);
+		Node functionVariable = new AssignmentObject(functionName, function, this);
+		return functionVariable;
+	}
+	
 	public Node Variable(){
-		Token token = MatchAndEat("KEYWORD");
-		Node node = new VariableObject(token.text, this);
+		Node node = null;
+		if(NextToken().type.Equals("LEFT_PAREN"))
+			node = FunctionCall();
+		else{
+			Token token = MatchAndEat("KEYWORD");
+			node = new VariableObject(token.text, this);
+		}
 		return node;
 	}
 	
@@ -462,7 +531,7 @@ public class Tokenizer {
 			case "while":type = "WHILE";break;
 			case "if":type = "IF";break;
 			case "else":type = "ELSE";break;
-			//case "function":type = "FUNCTION";break;
+			case "function":type = "FUNCTION";break;
 			default:       type = "KEYWORD";break;
 		}
 		return type;
@@ -552,9 +621,110 @@ public class Tokenizer {
     }
 }
 
+public class BoundParameter{
+	private String name;
+	private Object value;
+	public BoundParameter(String name, Object value){
+		this.name = name;
+		this.value = value;
+	}
+	public String getName(){
+		return name;
+	}
+	public Object getValue(){
+		return value;
+	}
+}
+
 public abstract class Node{
 	public Node(){}
 	public abstract Object opinion();
+}
+
+public class Parameter{
+	private String name;
+	private Node value;
+	public Parameter(Node value){
+		this.value = value;
+	}
+	public Parameter(String name, Node value){
+		this.name = name;
+		this.value = value;
+	}
+	public Parameter(String name){
+		this.name = name;
+	}
+	public Object opinion(){
+		return value.opinion();
+	}
+	public String getName(){
+		return name;
+	}
+	public Object getValue(){
+		return value.opinion();
+	}
+}
+
+public class FunctionCallNode : Node{
+	public Node name;
+	public List<Parameter> actualParameters;
+	public Parser parser;
+	public FunctionCallNode() {}
+	public FunctionCallNode(Node name, List<Parameter> actualParameters,Parser parser){
+		this.name = name;
+		this.actualParameters = actualParameters;
+		this.parser = parser;
+	}
+	public override Object opinion(){
+		Function function = (Function) name.opinion();
+		List<BoundParameter> boundParameters = new List<BoundParameter>();
+		if (function.getParameters() != null){
+			if (actualParameters != null){
+				if (actualParameters.Count < function.getParameters().Count){
+					Console.WriteLine("Too Few Parameters in Function Call: " + function.getName());
+					System.Environment.Exit(1);
+				}
+				else if (actualParameters.Count > function.getParameters().Count){
+					Console.WriteLine("Too Many Parameters in Function Call: "+ function.getName());
+					System.Environment.Exit(1);
+				}
+				else{
+					for (int index = 0; index < actualParameters.Count; index++){
+						String nameS = (function.getParameters())[index].getName();
+						Object value = actualParameters[index].getValue();
+						if (value is Function){
+							value = ((Function) value).opinion();
+						}
+						boundParameters.Add(new BoundParameter(nameS, value));
+					}
+				}
+			}
+		}
+		return parser.ExecuteFunction(function, boundParameters);
+	}
+}
+
+public class Function : Node{
+	private Node body;
+	private List<Parameter> parameters;
+	private String name;
+	public Function(String name, Node body, List<Parameter> parameters){
+		this.body = body;
+		this.parameters = parameters;
+		this.name = name;
+	}
+	public override Object opinion(){
+		return body.opinion();
+	}
+	public List<Parameter> getParameters(){
+		return parameters;
+	}
+	public Node getBody(){
+		return body;
+	}
+	public String getName(){
+		return name;
+	}
 }
 
 public class IfNode : Node{
@@ -726,7 +896,6 @@ public class AssignmentObject : Node{
 	public String name;
 	public Node value;
 	public Parser parser;
-	public String scope;
 	
 	public AssignmentObject() {}
 	public AssignmentObject(String name, Node value, Parser parser){
@@ -735,7 +904,10 @@ public class AssignmentObject : Node{
 		this.parser = parser;
 	}
 	public override Object opinion(){
-		return parser.setVariable(name, value.opinion());
+		if(value is Function)
+			return parser.setVariable(name, value);
+		else
+			return parser.setVariable(name, value.opinion());
 	}
 }
 
