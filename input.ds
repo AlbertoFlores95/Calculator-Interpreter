@@ -1,25 +1,68 @@
-$Esto es un commentario
+$This is a comment
 
-dilansharp
+$ Line to start the script
+script
 
+$ Define a function
+function one()
+	
+	$ Bolean expresion comparator
+	if(x>y)
+		println "true"
+	end
+	else
+		println "false"
+	end
+end
 
-EULER
-PI
-println ""
+$ Define another function
+function two()
+	
+	c = 1
+	
+	$ use a while in the script
+	while(c < 5)
+		println c
+		c = c + 1
+	end
+	
+end
 
+$ Define a function with parameters
+function three(z)
+	
+	println z
 
-5+3*8
+end
 
+$ Sum example
+x = 2 + 3
+println x
 
-x = (-100<100)
-y = (5<3)
-z = ((-100<100)|(5<3))
-x
-y
-z
-!z
-5+3
-PI=5
+$ Multiplication example
+y = 2 * 3
+println y
 
+$ Division example
+z = 10/3
+println z
 
+$ Pow example
+r = 2^3
+println r
+
+$ Modulo example
+j = 5 % 2
+println j
+
+$ Brackets asociation example
+h = 2*(5+2)
+println h
+
+$ Use functions
+one()
+two()
+three("Hello world!")
+
+$ end of script
 end

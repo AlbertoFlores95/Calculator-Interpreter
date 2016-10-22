@@ -524,7 +524,7 @@ public class Tokenizer {
 	public String FindStatementType(String str){
 		String type = "UNKNOWN";
 		switch(str){
-			case "shabosharp": type = "DS";break;
+			case "script": type = "DS";break;
 			case "end": type = "END";break;
 			case "print":  type = "PRINT";break;
 			case "println":type = "PRINTLN";break;
